@@ -123,6 +123,36 @@ Run and demonstrated on a **DE1-SoC board** with the Nios V (RISC-V) soft proces
 **Provided:** register addresses and bit layouts, and an example delay-loop snippet.
 
 ---
+## Lab 5 Personal Extension - Simple Processor Synthesis 
+
+The Lab 5 processor was only ever simulated behaviourally in ModelSim. This section takes it through synthesis, place and route, and static timing analysis in Quartus Prime, and documents a design flaw that synthesis exposed and simulation had not.
+
+**Tools and target:** Quartus Prime 18.0 Lite Edition, Cyclone V `5CSEMA5F31C6` (the DE1-SoC's FPGA, C6 speed grade). The design was synthesized and timed, not programmed onto a board.
+
+### What synthesis found
+
+Synthesis warned that the instruction register `Instr` was assigned a value but never read and removed it. The control path was decoding the opcode, register fields, and immediate directly from the `INSTRin` input port, so the instruction register was dead logic. The design passed simulation only because the submission checker for the course held `INSTRin` constant for the whole instruction.
+
+This had two consequences:
+1. **Correctness:** the processor gives wrong results if the instruction input changes after the instruction starts, which any real memory interface would do.
+2. **Timing:** the decode logic started at an input pin, so it was never timed. The baseline Fmax excluded it.
+
+### Fixing the bug
+
+The datapath now exposes the instruction register, and the control path decodes from it. The immediate is sign-extended from the register rather than the port. No other logic changed. The instruction now only has to be valid on the clock edge that loads it.
+
+| Metric | Baseline | Fixed |
+|---|---|---|
+| Registers | 68 | 84 |
+| Logic (ALMs) | 52 | 56 |
+| DSP blocks | 1 | 1 |
+| Fmax, worst corner (Slow 1100mV 0C) | 134.14 MHz | 123.61 MHz |
+| Unconstrained input port paths | 731 | 119 |
+
+### Verification
+`tb/tb_ir_disturbance.sv` runs both versions side by side. One test compared outputs with known results. A second test ran 2000 random instructions with a stable input. With the instruction input held constant for each whole instruction, as in the lab, both versions agree on 2,000 random instructions. A final test changed the instruction input after it loads. When changing the instructions mid-process, the unfixed version diverges 196 out of 200 times.
+
+---
 
 ## Notes
 
