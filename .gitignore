@@ -1,0 +1,11 @@
+db/
+incremental_db/
+output_files/*.sof
+output_files/*.pin
+output_files/*.done
+output_files/*.jdi
+output_files/*.sld
+output_files/*.smsg
+output_files/*.summary
+simulation/
+*.qws
